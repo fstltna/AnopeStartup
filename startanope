@@ -1,0 +1,94 @@
+#!/usr/bin/perl
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 1, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+my $ANOPEDIR = "/home/ircdaemon/services";
+my $SCREENCMD = "/usr/bin/screen";
+
+# No changes below here...
+
+my $startpath = $ENV{'PATH'};
+my $newpath = "$ANOPEDIR/exec:$startpath";
+my $exists = "";
+my $PidFile = "/home/ircdaemon/services/anope.pid";
+
+# Set ENV vars
+$ENV{'PATH'} = $newpath;
+$ENV{'TERM'} = "xterm-256color";
+
+sub IsRunning
+{
+        if (! -f $PidFile)
+        {
+                print "PID file not found\n";
+                return("nope");
+        }
+        # PID file found, checking for process
+        open(my $fh, '<:encoding(UTF-8)', $PidFile);
+        if ($fh eq "")
+        {
+                print "Could not open file '$PidFile' for reading $!";
+                return("nope");
+        }
+        my $CurLine = 0;
+        while (my $row = <$fh>)
+        {
+                chomp $row;
+                print "Read pid file '$row'\n";
+                $CurLine = $row;
+        }
+        close($fh);
+        if (kill(0, $CurLine) != 1)
+        {
+                return "nope";
+        }
+        return "anope";
+}
+
+my $running=IsRunning();
+
+# check if Anope process is running
+if ($running eq "anope")
+{
+	print ("Startupscript already running...\n");
+	exit (0);
+}
+
+while (-1)
+{
+	chdir $ANOPEDIR;
+	# check if Anope process is running
+	$running=IsRunning();
+	if ($running ne "anope")
+	{
+		print "Anope not running\n";
+		# See if they want the server started
+		if (! -f "$ANOPEDIR/nostart")
+		{
+			# The Log Entry
+			my $datestring = localtime();
+			my $TIME="Anope Down, Restarting: $datestring";
+			open(OUTF, ">>$ANOPEDIR/AnopeScreen.log") || die "Unable to open $ANOPEDIR/AnopeScreen.log for appending";
+			print (OUTF "$TIME\n");
+			close($OUTF);
+			chdir $ANOPEDIR;
+			print "Starting screen process\n";
+			system("$SCREENCMD -fa -S Anope -d -U -m $ANOPEDIR/bin/services --nofork");
+		}
+	}
+	# Sleep for 1 minute before checking again
+	sleep(60);
+}
+exit(0);

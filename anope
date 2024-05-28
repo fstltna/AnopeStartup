@@ -1,0 +1,96 @@
+#!/usr/bin/perl
+
+### BEGIN INIT INFO
+# Provides:          anope
+# Required-Start:    $local_fs $remote_fs $network $syslog
+# Required-Stop:     $local_fs $remote_fs $network $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Anope service 2.1.0
+# Description:       Anope service 2.1.0
+# Documentation:     https://bayrc.retro-os.live
+# Type:              forking
+# X-Interactive:     false
+### END INIT INFO
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 1, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+my $ANOPEDIR = "/home/ircdaemon/services";
+
+my $Command = $ARGV[0];
+if ($Command eq "")
+{
+	$Command = "NONE";
+}
+
+my $running=`ps ax|grep services|grep -v grep`;
+
+if ($Command eq "start")
+{
+	if ($running eq "")
+	{
+		print "Starting Anope...\n";
+		if (-f "$ANOPEDIR/nostart")
+		{
+			print "Removing $ANOPEDIR/nostart\n";
+			# Remove the lock file if it exists
+			unlink("$ANOPEDIR/nostart");
+		}
+		# Start the screen process
+print "file is '$ANOPEDIR/startanope'\n";
+		system("nohup $ANOPEDIR/startanope > /tmp/AnopeStartup.log\&");
+	}
+}
+elsif ($Command eq "stop")
+{
+	print "Stopping Anope process...\n";
+	system("touch '$ANOPEDIR/nostart'");
+	if ($running ne "")
+	{
+		# Process is running, kill it
+		system("killall services");
+	}
+}
+elsif ($Command eq "restart")
+{
+	if (-f "$ANOPEDIR/nostart")
+	{
+		print("Removing $ANOPEDIR/nostart\n");
+		unlink("$ANOPEDIR/nostart");
+	}
+	if ($running ne "")
+	{
+		system("killall services");
+	}
+}
+elsif ($Command eq "status")
+{
+	if ($running ne "")
+	{
+		print("Anope Server Running\n");
+	}
+	else
+	{
+		print("Anope Server Not Running\n");
+	}
+}
+else
+{
+	print ("Uknown command '$Command'\n");
+	print ("Usage: $0 {start|status|stop|restart}\n");
+	exit(1);
+}
+
+exit(0);
